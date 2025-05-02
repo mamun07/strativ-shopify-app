@@ -1,201 +1,173 @@
-import { useEffect } from "react";
 import { useFetcher, useLoaderData } from "@remix-run/react";
+import { authenticate } from "../shopify.server";
+import { useEffect, useState } from "react";
+
 import {
   Page,
-  Layout,
+  IndexTable,
   Text,
-  Card,
-  BlockStack,
-  Box,
-  Link,
-  InlineStack,
-  Icon,
+  Layout,
   Button,
+  Toast,
 } from "@shopify/polaris";
-import { EditIcon } from "@shopify/polaris-icons";
-import { authenticate } from "../shopify.server";
 
-// --- Loader: Fetch products and shop domain ---
-export const loader = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
-
-  const response = await admin.graphql(`
-    {
-      products(first: 20) {
-        edges {
-          node {
-            id
-            title
-            handle
-            featuredImage {
-              url
-              altText
-            }
-            variants(first: 1) {
-              edges {
-                node {
-                  price
-                }
+// GraphQL query to fetch products
+const GET_PRODUCTS_QUERY = `
+  query {
+    products(first: 10, sortKey: CREATED_AT, reverse: true) {
+      edges {
+        node {
+          id
+          title
+          status
+          createdAt
+          variants(first: 1) {
+            edges {
+              node {
+                price
               }
             }
           }
         }
       }
     }
-  `);
+  }
+`;
 
-  const json = await response.json();
-  const products = json.data.products.edges.map((edge) => {
-    const node = edge.node;
-    return {
-      ...node,
-      price: node.variants.edges[0]?.node.price || "N/A",
-    };
-  });
+// GraphQL mutation to toggle product status
+const UPDATE_PRODUCT_MUTATION = `
+  mutation productUpdate($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product {
+        id
+        status
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+// Loader to fetch products
+export const loader = async ({ request }) => {
+  const { admin } = await authenticate.admin(request);
+  const res = await admin.graphql(GET_PRODUCTS_QUERY);
+  const data = await res.json();
 
   return {
-    products,
-    shop: session.shop,
+    products: data.data.products.edges.map((edge) => edge.node),
   };
 };
 
-// --- Action: Create a new random product ---
+// Action to handle the status toggle
 export const action = async ({ request }) => {
+  const formData = new URLSearchParams(await request.text());
+  const productId = formData.get("productId");
+  const currentStatus = formData.get("currentStatus");
+
+  const newStatus = currentStatus === "ACTIVE" ? "DRAFT" : "ACTIVE";
+
   const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
+  const res = await admin.graphql(UPDATE_PRODUCT_MUTATION, {
+    variables: { input: { id: productId, status: newStatus } },
+  });
 
-  const response = await admin.graphql(
-    `#graphql
-    mutation populateProduct($product: ProductCreateInput!) {
-      productCreate(product: $product) {
-        product {
-          id
-          title
-          handle
-          status
-          variants(first: 10) {
-            edges {
-              node {
-                id
-                price
-                barcode
-                createdAt
-              }
-            }
-          }
-        }
-      }
-    }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    }
-  );
+  const data = await res.json();
 
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
+  if (data.errors || data.data.productUpdate.userErrors.length) {
+    return {
+      error:
+        data.errors?.[0]?.message ||
+        data.data.productUpdate.userErrors?.[0]?.message ||
+        "Failed to update product.",
+    };
+  }
 
-  const variantId = product.variants.edges[0].node.id;
-
-  await admin.graphql(
-    `#graphql
-    mutation updateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    }
-  );
-
-  return { product };
+  return { success: true };
 };
 
-// --- Main Component ---
+// Main component
 export default function Index() {
-  const { products, shop } = useLoaderData();
+  const { products } = useLoaderData();
   const fetcher = useFetcher();
-  const isSubmitting = fetcher.state === "submitting";
+  const [toast, setToast] = useState({ active: false, content: "" });
 
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  useEffect(() => {
+    if (fetcher.data?.success) {
+      setToast({ active: true, content: "Product status updated!" });
+    } else if (fetcher.data?.error) {
+      setToast({ active: true, content: fetcher.data.error });
+    }
+  }, [fetcher.data]);
 
   return (
-    <Page title="Product Customization">
+    <Page title="Latest Products" fullWidth>
       <Layout>
         <Layout.Section>
-          <Button onClick={generateProduct} loading={isSubmitting}>
-            Generate a Product
-          </Button>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">
-                Product List
-              </Text>
-
-              {products.map((product) => (
-                <InlineStack
+          <IndexTable
+            resourceName={{ singular: "product", plural: "products" }}
+            itemCount={products.length}
+            headings={[
+              { title: "SL" },
+              { title: "Title" },
+              { title: "Status" },
+              { title: "Price" },
+              { title: "Published" },
+              { title: "Actions" },
+            ]}
+            selectable={false}
+          >
+            {products.map((product, index) => {
+              const variant = product.variants.edges[0]?.node;
+              return (
+                <IndexTable.Row
+                  id={product.id}
                   key={product.id}
-                  align="space-between"
-                  blockAlign="center"
+                  position={index}
                 >
-                  <InlineStack gap="300" blockAlign="center">
-                    {product.featuredImage?.url && (
-                      <Box width="50px" height="50px">
-                        <img
-                          src={product.featuredImage.url}
-                          alt={product.featuredImage.altText || product.title}
-                          style={{ width: "100%", height: "auto", borderRadius: 6 }}
-                        />
-                      </Box>
-                    )}
-                    <BlockStack spacing="none">
-                      <Text fontWeight="medium">{product.title}</Text>
-                      <Text variant="bodySm" tone="subdued">
-                        ${product.price}
-                      </Text>
-                    </BlockStack>
-                  </InlineStack>
-
-                  <Link
-                    url={`https://${shop}/admin/products/${product.id.replace(
-                      "gid://shopify/Product/",
-                      ""
-                    )}`}
-                    target="_blank"
-                  >
-                    <Icon source={EditIcon} tone="base" />
-                  </Link>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section variant="oneThird">
-          <Card>
-            <Text as="h2" variant="headingMd">
-              Total Products: {products.length}
-            </Text>
-          </Card>
+                  <IndexTable.Cell>
+                    <Text>{index + 1}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text variant="bodyMd" fontWeight="bold">
+                      {product.title}
+                    </Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>{product.status}</IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {variant?.price} {variant?.currencyCode}
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    {new Date(product.createdAt).toLocaleString()}
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <fetcher.Form method="post">
+                      <input type="hidden" name="productId" value={product.id} />
+                      <input
+                        type="hidden"
+                        name="currentStatus"
+                        value={product.status}
+                      />
+                      <Button submit primary>
+                        Toggle to {product.status === "ACTIVE" ? "Draft" : "Active"}
+                      </Button>
+                    </fetcher.Form>
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              );
+            })}
+          </IndexTable>
         </Layout.Section>
       </Layout>
+
+      {toast.active && (
+        <Toast
+          content={toast.content}
+          onDismiss={() => setToast({ ...toast, active: false })}
+        />
+      )}
     </Page>
   );
 }

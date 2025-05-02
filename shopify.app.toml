@@ -3,7 +3,7 @@
 client_id = "a076e96639cf512f6a480b8305f951d0"
 name = "Strativbd"
 handle = "strativbd"
-application_url = "https://tennis-antibody-aluminum-neo.trycloudflare.com"
+application_url = "https://executed-operating-immigrants-license.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products, write_products"
 
 [auth]
 redirect_urls = [
-  "https://tennis-antibody-aluminum-neo.trycloudflare.com/auth/callback",
-  "https://tennis-antibody-aluminum-neo.trycloudflare.com/auth/shopify/callback",
-  "https://tennis-antibody-aluminum-neo.trycloudflare.com/api/auth/callback"
+  "https://executed-operating-immigrants-license.trycloudflare.com/auth/callback",
+  "https://executed-operating-immigrants-license.trycloudflare.com/auth/shopify/callback",
+  "https://executed-operating-immigrants-license.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
