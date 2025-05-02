@@ -88,12 +88,14 @@ export const action = async ({ request }) => {
   return { success: true };
 };
 
+
+
 // Main component
 export default function Index() {
   const { products } = useLoaderData();
   const fetcher = useFetcher();
   const [toast, setToast] = useState({ active: false, content: "" });
-
+  
   useEffect(() => {
     if (fetcher.data?.success) {
       setToast({ active: true, content: "Product status updated!" });
@@ -101,9 +103,9 @@ export default function Index() {
       setToast({ active: true, content: fetcher.data.error });
     }
   }, [fetcher.data]);
-
+  
   return (
-    <Page title="Latest Products" fullWidth>
+    <Page title="Latest Products" fullWidth>      
       <Layout>
         <Layout.Section>
           <IndexTable
