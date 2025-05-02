@@ -2,7 +2,7 @@
 import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 import { AppProvider, Frame } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
-import "@shopify/polaris/build/esm/styles.css"; // Make sure styles are imported
+import "@shopify/polaris/build/esm/styles.css";
 
 export default function App() {
   return (
