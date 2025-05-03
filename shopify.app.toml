@@ -3,7 +3,7 @@
 client_id = "a076e96639cf512f6a480b8305f951d0"
 name = "Strativbd"
 handle = "strativbd"
-application_url = "https://executed-operating-immigrants-license.trycloudflare.com"
+application_url = "https://polish-na-vocational-discretion.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_products, write_products"
 
 [auth]
 redirect_urls = [
-  "https://executed-operating-immigrants-license.trycloudflare.com/auth/callback",
-  "https://executed-operating-immigrants-license.trycloudflare.com/auth/shopify/callback",
-  "https://executed-operating-immigrants-license.trycloudflare.com/api/auth/callback"
+  "https://polish-na-vocational-discretion.trycloudflare.com/auth/callback",
+  "https://polish-na-vocational-discretion.trycloudflare.com/auth/shopify/callback",
+  "https://polish-na-vocational-discretion.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
