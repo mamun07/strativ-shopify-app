@@ -55,7 +55,6 @@ export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const res = await admin.graphql(GET_PRODUCTS_QUERY);
   const data = await res.json();
-
   return {
     products: data.data.products.edges.map((edge) => edge.node),
   };
@@ -66,14 +65,12 @@ export const action = async ({ request }) => {
   const formData = new URLSearchParams(await request.text());
   const productId = formData.get("productId");
   const currentStatus = formData.get("currentStatus");
-
   const newStatus = currentStatus === "ACTIVE" ? "DRAFT" : "ACTIVE";
-
   const { admin } = await authenticate.admin(request);
+
   const res = await admin.graphql(UPDATE_PRODUCT_MUTATION, {
     variables: { input: { id: productId, status: newStatus } },
   });
-
   const data = await res.json();
 
   if (data.errors || data.data.productUpdate.userErrors.length) {
@@ -84,7 +81,6 @@ export const action = async ({ request }) => {
         "Failed to update product.",
     };
   }
-
   return { success: true };
 };
 
@@ -181,7 +177,7 @@ export default function Index() {
 
       {toast.active && (
         <Toast
-          content={toast.content}
+           content={toast.content}
           onDismiss={() => setToast({ ...toast, active: false })}
         />
       )}
