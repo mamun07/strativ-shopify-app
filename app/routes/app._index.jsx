@@ -88,24 +88,27 @@ export const action = async ({ request }) => {
   return { success: true };
 };
 
-
-
 // Main component
 export default function Index() {
   const { products } = useLoaderData();
   const fetcher = useFetcher();
   const [toast, setToast] = useState({ active: false, content: "" });
-  
+  const [submittingProductId, setSubmittingProductId] = useState(null);
+
   useEffect(() => {
+    if (fetcher.state === "idle") {
+      setSubmittingProductId(null); // reset loading state
+    }
+
     if (fetcher.data?.success) {
       setToast({ active: true, content: "Product status updated!" });
     } else if (fetcher.data?.error) {
       setToast({ active: true, content: fetcher.data.error });
     }
-  }, [fetcher.data]);
-  
+  }, [fetcher.state, fetcher.data]);
+
   return (
-    <Page title="Latest Products" fullWidth>      
+    <Page title="Latest Products" fullWidth>
       <Layout>
         <Layout.Section>
           <IndexTable
@@ -152,7 +155,19 @@ export default function Index() {
                         name="currentStatus"
                         value={product.status}
                       />
-                      <Button submit primary>
+                      <Button
+                        submit
+                        primary
+                        onClick={() => setSubmittingProductId(product.id)}
+                        loading={
+                          fetcher.state === "submitting" &&
+                          submittingProductId === product.id
+                        }
+                        disabled={
+                          fetcher.state === "submitting" &&
+                          submittingProductId === product.id
+                        }
+                      >
                         Toggle to {product.status === "ACTIVE" ? "Draft" : "Active"}
                       </Button>
                     </fetcher.Form>
